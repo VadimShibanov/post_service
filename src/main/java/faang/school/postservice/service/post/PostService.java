@@ -1,14 +1,18 @@
 package faang.school.postservice.service.post;
 
 import faang.school.postservice.dto.post.PostDto;
+import faang.school.postservice.dto.post.redis.PostRedisDto;
 import faang.school.postservice.exception.DataOperationException;
 import faang.school.postservice.exception.DataValidationException;
+import faang.school.postservice.kafka.producer.KafkaPostProducer;
 import faang.school.postservice.mapper.PostMapper;
 import faang.school.postservice.model.Post;
 import faang.school.postservice.repository.PostRepository;
+import faang.school.postservice.repository.redis.RedisPostRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -23,9 +27,19 @@ import static faang.school.postservice.exception.message.PostValidationException
 @RequiredArgsConstructor
 @Slf4j
 public class PostService {
+
     private final PostRepository postRepository;
+
     private final PostMapper postMapper;
+
     private final PostVerifier postVerifier;
+
+    private final RedisPostRepository postCache;
+
+    private final KafkaPostProducer kafkaPostProducer;
+
+    @Value("${spring.data.redis.post-cache.ttl}")
+    private int postTtlInCache;
 
     public PostDto createPost(@Valid PostDto postDto) {
         postVerifier.verifyAuthorExistence(postDto.getAuthorId(), postDto.getProjectId());
@@ -46,6 +60,12 @@ public class PostService {
 
         postToBePublished.setPublished(true);
         postToBePublished.setPublishedAt(LocalDateTime.now());
+
+        Post publishedPost = postRepository.save(postToBePublished);
+        kafkaPostProducer.sendPostEvent(publishedPost);
+
+        PostRedisDto publishedPostRedisDto = postMapper.toDtoRedis(publishedPost);
+        cachePost(publishedPostRedisDto);
 
         return postMapper.toDto(postRepository.save(postToBePublished));
     }
@@ -129,5 +149,10 @@ public class PostService {
                 .sorted(Comparator.comparing(Post::getCreatedAt).reversed())
                 .map(postMapper::toDto)
                 .toList();
+    }
+
+    private void cachePost(PostRedisDto postRedisDto) {
+        postRedisDto.setTtl(postTtlInCache);
+        postCache.save(postRedisDto);
     }
 }

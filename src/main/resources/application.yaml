@@ -25,6 +25,8 @@ spring:
         calculationsChannel: calculations_channel
         likesChannel: likes_channel
         commentsChannel: comments_channel
+      post-cache:
+        ttl: 86400
 
 server:
   port: 8085
