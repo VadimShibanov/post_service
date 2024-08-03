@@ -1,0 +1,65 @@
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: user
+    password: password
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+  data:
+    redis:
+      port: 6379
+      host: localhost
+      channels:
+        calculationsChannel: calculations_channel
+        likesChannel: likes_channel
+        commentsChannel: comments_channel
+
+server:
+  port: 8085
+
+logging:
+  level:
+    root: info
+
+# properties for corrector API
+corrector:
+  request-delay: 1010 # millis
+  grammar-bot:
+    spellCheckerUri: https://grammarbot-neural.p.rapidapi.com/v1/check
+    keyValue: eba230c503mshd6f5ee13879a0c2p1756d7jsn538dcde5de26
+    keyHeader: x-rapidapi-key
+    contentTypeValue: application/json
+    contentTypeHeader: Content-Type
+
+post:
+  corrector:
+    scheduler:
+      cron: "0 0 1 * * *" # every day at 01:00 AM
+  publisher:
+    scheduler:
+      cron: "0 0/1 * 1/1 * ?" # every minute
+  ad-remover:
+    scheduler:
+      cron: "0 0/1 * 1/1 * ?" # every minute
+
+user-service:
+  host: localhost
+  port: 8080
+project-service:
+  host: localhost
+  port: 8083
+payment-service:
+  host: localhost
+  port: 9080
