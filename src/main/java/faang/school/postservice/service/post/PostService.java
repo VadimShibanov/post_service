@@ -1,19 +1,28 @@
 package faang.school.postservice.service.post;
 
+import faang.school.postservice.client.UserServiceClient;
 import faang.school.postservice.dto.post.PostDto;
+import faang.school.postservice.dto.redis.PostRedisDto;
+import faang.school.postservice.dto.redis.UserRedisDto;
+import faang.school.postservice.dto.user.UserDto;
 import faang.school.postservice.exception.DataOperationException;
 import faang.school.postservice.exception.DataValidationException;
+import faang.school.postservice.kafka.producer.KafkaPostProducer;
+import faang.school.postservice.kafka.producer.KafkaPostViewProducer;
 import faang.school.postservice.mapper.PostMapper;
 import faang.school.postservice.model.Post;
 import faang.school.postservice.repository.PostRepository;
+import faang.school.postservice.repository.redis.RedisPostRepository;
+import faang.school.postservice.repository.redis.RedisUserRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 import static faang.school.postservice.exception.message.PostOperationExceptionMessage.RE_DELETING_POST_EXCEPTION;
 import static faang.school.postservice.exception.message.PostOperationExceptionMessage.RE_PUBLISHING_POST_EXCEPTION;
@@ -23,9 +32,25 @@ import static faang.school.postservice.exception.message.PostValidationException
 @RequiredArgsConstructor
 @Slf4j
 public class PostService {
+
     private final PostRepository postRepository;
+
     private final PostMapper postMapper;
+
     private final PostVerifier postVerifier;
+
+    private final RedisPostRepository postCache;
+
+    private final RedisUserRepository userCache;
+
+    private final KafkaPostProducer kafkaPostProducer;
+
+    private final KafkaPostViewProducer kafkaPostViewProducer;
+
+    private final UserServiceClient userServiceClient;
+
+    @Value("${spring.data.redis.post-cache.ttl}")
+    private int timeToLive;
 
     public PostDto createPost(@Valid PostDto postDto) {
         postVerifier.verifyAuthorExistence(postDto.getAuthorId(), postDto.getProjectId());
@@ -34,9 +59,11 @@ public class PostService {
         postDraft.setPublished(false);
         postDraft.setDeleted(false);
 
+        log.info("Post has been created.");
         return postMapper.toDto(postRepository.save(postDraft));
     }
 
+    @Transactional
     public PostDto publishPost(long postId) {
         Post postToBePublished = getPost(postId);
 
@@ -46,6 +73,16 @@ public class PostService {
 
         postToBePublished.setPublished(true);
         postToBePublished.setPublishedAt(LocalDateTime.now());
+
+        Post publishedPost = postRepository.save(postToBePublished);
+        log.info("Post has been published.");
+
+        kafkaPostProducer.sendPostEvent(publishedPost);
+        log.info("PostEvent has been sent from PostService.");
+
+        cachePost(postMapper.toDtoRedis(publishedPost));
+        cacheAuthor(publishedPost.getAuthorId());
+        log.info("Post and author have been cached.");
 
         return postMapper.toDto(postRepository.save(postToBePublished));
     }
@@ -78,7 +115,14 @@ public class PostService {
     }
 
     public PostDto getPostById(long postId) {
-        return postMapper.toDto(getPost(postId));
+        Post post = getPost(postId);
+        PostDto postDto = postMapper.toDto(post);
+        log.info("Post has been received.");
+
+        kafkaPostViewProducer.sendPostViewEvent(post);
+        log.info("PostViewEvent has been sent from PostService.");
+
+        return postDto;
     }
 
 
@@ -129,5 +173,21 @@ public class PostService {
                 .sorted(Comparator.comparing(Post::getCreatedAt).reversed())
                 .map(postMapper::toDto)
                 .toList();
+    }
+
+    private void cachePost(PostRedisDto postRedisDto) {
+        postRedisDto.setTtl(timeToLive);
+
+        postCache.save(postRedisDto);
+    }
+
+    private void cacheAuthor(Long authorId) {
+        UserDto userDto = userServiceClient.getUser(authorId);
+
+        UserRedisDto userRedisDto = new UserRedisDto();
+        userRedisDto.setUsername(userDto.getUsername());
+        userRedisDto.setTtl(timeToLive);
+
+        userCache.save(userRedisDto);
     }
 }

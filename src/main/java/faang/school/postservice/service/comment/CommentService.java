@@ -1,9 +1,10 @@
-package faang.school.postservice.service;
+package faang.school.postservice.service.comment;
 
 import faang.school.postservice.client.UserServiceClient;
 import faang.school.postservice.dto.comment.CommentDto;
 import faang.school.postservice.dto.event.CommentEventDto;
 import faang.school.postservice.exception.DataValidationException;
+import faang.school.postservice.kafka.producer.KafkaCommentProducer;
 import faang.school.postservice.mapper.CommentMapper;
 import faang.school.postservice.mapper.PostMapper;
 import faang.school.postservice.model.Comment;
@@ -11,6 +12,7 @@ import faang.school.postservice.redis.CommentEventPublisher;
 import faang.school.postservice.repository.CommentRepository;
 import faang.school.postservice.service.post.PostService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +26,7 @@ import static faang.school.postservice.exception.MessagesForCommentsException.NO
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CommentService {
 
     private final CommentMapper commentMapper;
@@ -38,12 +41,18 @@ public class CommentService {
 
     private final CommentEventPublisher commentEventPublisher;
 
+    private final KafkaCommentProducer kafkaCommentProducer;
+
     public CommentDto createComment(long id, CommentDto commentDto) {
         checkCommentDto(commentDto);
         Comment comment = commentMapper.ToEntity(commentDto);
         comment.setPost(postMapper.toEntity(postService.getPostById(id)));
 
         Comment savedComment = commentRepository.save(comment);
+        log.info("Comment has been created.");
+
+        kafkaCommentProducer.sendCommentEvent(savedComment);
+        log.info("CommentEvent has been sent from CommentService.");
 
         sendCommentEvent(comment);
 
@@ -99,10 +108,8 @@ public class CommentService {
         }
         CommentEventDto commentEventDto = CommentEventDto.builder()
                 .commentAuthorId(commentAuthorId)
-                .postAuthorId(postAuthorId)
                 .postId(comment.getPost().getId())
-                .commentId(comment.getId())
-                .commentText(comment.getContent())
+                .content(comment.getContent())
                 .createdAt(comment.getCreatedAt())
                 .build();
 

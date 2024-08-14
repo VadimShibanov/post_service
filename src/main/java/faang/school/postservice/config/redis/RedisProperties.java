@@ -14,13 +14,18 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "spring.data.redis")
 class RedisProperties {
+
     private int port;
+
     private String host;
+
     private Channels channels;
 
     @Data
     public static class Channels {
+
         private String likesChannel;
+
         private String commentsChannel;
     }
 }

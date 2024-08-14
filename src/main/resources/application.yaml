@@ -25,6 +25,23 @@ spring:
         calculationsChannel: calculations_channel
         likesChannel: likes_channel
         commentsChannel: comments_channel
+      feed-cache:
+        heater-batch-size: 10
+        max-posts-amount: 5
+      post-cache:
+        ttl: 86400
+      comments-amount: 3
+
+  kafka:
+    host: localhost
+    port: 9092
+    group-id: news_feed
+    topics-names:
+      post: post_topic
+      comment: comment_topic
+      like: like_topic
+      view: post_view_topic
+      feed-heat: feed_heat_topic
 
 server:
   port: 8085
@@ -53,6 +70,9 @@ post:
   ad-remover:
     scheduler:
       cron: "0 0/1 * 1/1 * ?" # every minute
+  feed:
+    get-batch-size: 3
+    get-batch-for-heat-feed-size: 10
 
 user-service:
   host: localhost

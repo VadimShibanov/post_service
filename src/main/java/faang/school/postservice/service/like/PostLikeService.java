@@ -3,6 +3,7 @@ package faang.school.postservice.service.like;
 import faang.school.postservice.dto.LikeDto;
 import faang.school.postservice.dto.event.LikeEventDto;
 import faang.school.postservice.exception.NotFoundException;
+import faang.school.postservice.kafka.producer.KafkaLikeProducer;
 import faang.school.postservice.mapper.like.LikeMapper;
 import faang.school.postservice.model.Like;
 import faang.school.postservice.model.Post;
@@ -12,10 +13,12 @@ import faang.school.postservice.repository.PostRepository;
 import faang.school.postservice.validation.like.post.PostLikeValidator;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PostLikeService {
     private final PostLikeValidator validator;
     private final PostRepository postRepository;
@@ -23,12 +26,18 @@ public class PostLikeService {
     private final LikeMapper mapper;
     private final LikeEventPublisher likeEventPublisher;
 
+    private final KafkaLikeProducer kafkaLikeProducer;
+
     public LikeDto likePost(LikeDto dto) {
         validator.verifyCanLikePost(dto);
 
         Like like = mapper.toModel(dto);
         like.setPost(getPostById(dto.getPostId()));
         likeRepository.save(like);
+        log.info("Like has been created.");
+
+        kafkaLikeProducer.sendLikeEvent(like);
+        log.info("LikeEvent has been sent from PostLikeService.");
 
         submitEvent(dto);
 

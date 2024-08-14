@@ -6,7 +6,10 @@ public enum PostOperationExceptionMessage {
     COMMENTS_UPDATE_EXCEPTION("Comments of post can't be updated through post updating."),
     PUBLISHED_DATE_UPDATE_EXCEPTION("Publishing date of post cannot be updated."),
     DELETED_STATUS_UPDATE_EXCEPTION("Deleted status of post cannot be changed through update."),
-    RE_DELETING_POST_EXCEPTION("The post cannot be re-deleted.");
+    RE_DELETING_POST_EXCEPTION("The post cannot be re-deleted."),
+
+    NO_POST_IN_CACHE("There is no post in cache");
+
     private final String message;
 
     PostOperationExceptionMessage(String message) {
