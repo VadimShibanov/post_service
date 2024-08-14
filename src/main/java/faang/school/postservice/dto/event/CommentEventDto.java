@@ -3,24 +3,21 @@ package faang.school.postservice.dto.event;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
 @Builder
-public class CommentEventDto extends EventDto implements Serializable {
+@NoArgsConstructor
+public class CommentEventDto extends EventDto {
 
     private Long commentAuthorId;
 
-    private Long postAuthorId;
-
     private Long postId;
 
-    private Long commentId;
-
-    private String commentText;
+    private String content;
 
     private LocalDateTime createdAt;
 }

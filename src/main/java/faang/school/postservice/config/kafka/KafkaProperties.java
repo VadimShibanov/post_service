@@ -26,6 +26,12 @@ public class KafkaProperties {
 
         private String post;
 
+        private String view;
+
         private String comment;
+
+        private String like;
+
+        private String feedHeat;
     }
 }

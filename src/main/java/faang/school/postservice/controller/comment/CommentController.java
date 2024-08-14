@@ -1,7 +1,7 @@
-package faang.school.postservice.controller;
+package faang.school.postservice.controller.comment;
 
 import faang.school.postservice.dto.comment.CommentDto;
-import faang.school.postservice.service.CommentService;
+import faang.school.postservice.service.comment.CommentService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
@@ -21,25 +21,25 @@ public class CommentController {
 
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/{postId}")
-    CommentDto createComment(@Min(1) @PathVariable long postId, @Valid @RequestBody CommentDto commentDto) {
+    public CommentDto createComment(@Min(1) @PathVariable long postId, @Valid @RequestBody CommentDto commentDto) {
         return commentService.createComment(postId, commentDto);
     }
 
     @ResponseStatus(HttpStatus.OK)
     @PutMapping
-    CommentDto updateComment(@Valid @RequestBody CommentDto commentDto) {
+    public CommentDto updateComment(@Valid @RequestBody CommentDto commentDto) {
         return commentService.updateComment(commentDto);
     }
 
     @ResponseStatus(HttpStatus.OK)
     @GetMapping("/{postId}")
-    List<CommentDto> getAllComments(@Min(1) @PathVariable long postId) {
+    public List<CommentDto> getAllComments(@Min(1) @PathVariable long postId) {
         return commentService.getAllComments(postId);
     }
 
     @ResponseStatus(HttpStatus.OK)
     @DeleteMapping
-    void deleteComment(@Valid @RequestBody CommentDto commentDto) {
+    public void deleteComment(@Valid @RequestBody CommentDto commentDto) {
         commentService.deleteComment(commentDto);
     }
 }

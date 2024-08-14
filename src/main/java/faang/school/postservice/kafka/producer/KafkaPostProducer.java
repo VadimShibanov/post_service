@@ -4,6 +4,7 @@ import faang.school.postservice.client.UserServiceClient;
 import faang.school.postservice.dto.event.EventDto;
 import faang.school.postservice.dto.event.PostEventDto;
 import faang.school.postservice.model.Post;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.retry.annotation.Retryable;
@@ -13,14 +14,17 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 @Component
+@Slf4j
 public class KafkaPostProducer extends AbstractEventProducer {
 
     private final UserServiceClient userServiceClient;
 
     public KafkaPostProducer(
             KafkaTemplate<String, EventDto> kafkaTemplate,
-            NewTopic topic, UserServiceClient userServiceClient) {
-        super(kafkaTemplate, topic);
+            NewTopic postKafkaTopic,
+            UserServiceClient userServiceClient
+    ) {
+        super(kafkaTemplate, postKafkaTopic);
         this.userServiceClient = userServiceClient;
     }
 
@@ -36,5 +40,6 @@ public class KafkaPostProducer extends AbstractEventProducer {
                 .build();
 
         sendEvent(postEventDto, String.valueOf(post.getAuthorId()));
+        log.info("PostEventDto has been sent from KafkaPostProducer");
     }
 }

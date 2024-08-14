@@ -8,13 +8,13 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class AbstractEventProducer {
+public abstract class AbstractEventProducer {
 
     private final KafkaTemplate<String, EventDto> kafkaTemplate;
 
     private final NewTopic topic;
 
-    protected void sendEvent(EventDto eventDto, String key) {
+    public void sendEvent(EventDto eventDto, String key) {
         kafkaTemplate.send(topic.name(), key, eventDto);
     }
 }

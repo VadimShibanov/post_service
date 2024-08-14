@@ -1,18 +1,20 @@
 package faang.school.postservice.mapper;
 
 import faang.school.postservice.dto.post.PostDto;
-import faang.school.postservice.dto.post.redis.PostRedisDto;
+import faang.school.postservice.dto.redis.PostRedisDto;
 import faang.school.postservice.model.Comment;
 import faang.school.postservice.model.Like;
 import faang.school.postservice.model.Post;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
+import org.w3c.dom.ls.LSException;
 
 import java.util.List;
 
 @Mapper(componentModel = "spring")
 public interface PostMapper {
+
     @Mapping(target = "likes", ignore = true)
     @Mapping(target = "comments", ignore = true)
     Post toEntity(PostDto postDto);
@@ -22,9 +24,13 @@ public interface PostMapper {
     PostDto toDto(Post post);
 
     @Mapping(target = "ttl", ignore = true)
+    @Mapping(target = "likes", ignore = true)
     PostRedisDto toDtoRedis(Post post);
 
     List<PostDto> toDto(List<Post> posts);
+
+    @Mapping(target = "comments", ignore = true)
+    List<PostRedisDto> toDtoRedis(List<Post> posts);
 
     @Named("likesToLikesIds")
     default List<Long> likesToLikesIds(List<Like> likes) {
